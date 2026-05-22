@@ -2,7 +2,7 @@
   "name": "Product Pricer",
   "short_name": "Pricer",
   "description": "Quick product pricing calculator",
-  "start_url": "/",
+  "start_url": "/product-pricer/",
   "display": "standalone",
   "background_color": "#F0F2F5",
   "theme_color": "#1565C0",
