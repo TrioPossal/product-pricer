@@ -139,6 +139,75 @@
     .btn-save:active { background: #0D47A1; }
     .btn-save.saving { opacity: .7; }
     .btn-save.saved  { background: #388E3C; }
+
+    /* PIN modal */
+    .pin-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .pin-overlay.open { display: flex; }
+    .pin-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px 24px;
+      width: 300px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.2);
+    }
+    .pin-box h3 { font-size: 17px; color: #212121; margin-bottom: 6px; }
+    .pin-box p  { font-size: 13px; color: #757575; margin-bottom: 20px; }
+    .pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .pin-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #E0E0E0;
+      transition: background .15s;
+    }
+    .pin-dot.filled { background: #1565C0; }
+    .pin-hidden {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+    }
+    .pin-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .pin-key {
+      background: #F5F5F5;
+      border: none;
+      border-radius: 10px;
+      font-size: 22px;
+      font-weight: 600;
+      padding: 14px;
+      cursor: pointer;
+      color: #212121;
+      transition: background .1s;
+    }
+    .pin-key:active { background: #E0E0E0; }
+    .pin-key.del { font-size: 16px; color: #757575; }
+    .pin-error { color: #C62828; font-size: 13px; min-height: 18px; margin-bottom: 10px; }
+    .pin-cancel {
+      background: none;
+      border: none;
+      color: #757575;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 8px;
+    }
   </style>
 </head>
 <body>
@@ -203,6 +272,37 @@
   </div>
 </main>
 
+<!-- PIN Modal -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-box">
+    <h3>Enter PIN</h3>
+    <p>6-digit PIN required to save</p>
+    <div class="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+      <div class="pin-dot" id="d4"></div>
+      <div class="pin-dot" id="d5"></div>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-grid">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key del" onclick="pinDel()">⌫</button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key del" onclick="pinCancel()">✕</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ── Replace this with your deployed Apps Script URL ──────────────────────
   const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbz3CAC8MKqQ0V8WLKYotCL6LFYTyDsrTiZNTDCezkc54YRViuxHgvy_0ksDHLxYbGg/exec';
@@ -265,9 +365,50 @@
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  async function saveToSheet() {
+  // ── PIN logic ─────────────────────────────────────────────────────────────
+  let pinValue = '';
+
+  function pinKey(digit) {
+    if (pinValue.length >= 6) return;
+    pinValue += digit;
+    updateDots();
+    if (pinValue.length === 6) setTimeout(pinSubmit, 120);
+  }
+
+  function pinDel() {
+    pinValue = pinValue.slice(0, -1);
+    updateDots();
+    document.getElementById('pin-error').textContent = '';
+  }
+
+  function updateDots() {
+    for (let i = 0; i < 6; i++) {
+      document.getElementById('d' + i).classList.toggle('filled', i < pinValue.length);
+    }
+  }
+
+  function pinCancel() {
+    pinValue = '';
+    updateDots();
+    document.getElementById('pin-error').textContent = '';
+    document.getElementById('pin-overlay').classList.remove('open');
+  }
+
+  function saveToSheet() {
     if (!lastResult) return;
+    pinValue = '';
+    updateDots();
+    document.getElementById('pin-error').textContent = '';
+    document.getElementById('pin-overlay').classList.add('open');
+  }
+
+  async function pinSubmit() {
+    const pin = pinValue;
+    pinValue = '';
+    updateDots();
+
     const btn = document.getElementById('save-btn');
+    document.getElementById('pin-overlay').classList.remove('open');
     btn.textContent = 'Saving…';
     btn.className   = 'btn btn-save saving';
     btn.disabled    = true;
@@ -287,13 +428,21 @@
       const resp = await fetch(SHEETS_URL, {
         method: 'POST',
         redirect: 'follow',
-        body: JSON.stringify({ row, secret: SECRET }),
+        body: JSON.stringify({ row, secret: SECRET, pin }),
       });
       const data = await resp.json();
       if (data.status === 'ok') {
         btn.textContent = 'Saved!';
         btn.className   = 'btn btn-save saved';
         btn.disabled    = false;
+      } else if (data.error === 'Wrong PIN') {
+        btn.textContent = 'Save to Google Sheet';
+        btn.className   = 'btn btn-save';
+        btn.disabled    = false;
+        pinValue = '';
+        updateDots();
+        document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
+        document.getElementById('pin-overlay').classList.add('open');
       } else {
         throw new Error(data.error || 'Unknown error');
       }
