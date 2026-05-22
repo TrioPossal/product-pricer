@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1565C0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Product Pricer">
+  <title>Product Pricer</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F0F2F5;
+      min-height: 100dvh;
+    }
+
+    header {
+      background: #1565C0;
+      color: white;
+      padding: 16px 20px;
+      padding-top: calc(16px + env(safe-area-inset-top));
+    }
+    header h1 { font-size: 20px; font-weight: 700; }
+    header p  { font-size: 13px; color: #90CAF9; margin-top: 3px; }
+
+    main {
+      padding: 18px 16px;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 18px 0 12px;
+    }
+    .section-label span {
+      font-size: 11px;
+      font-weight: 700;
+      color: #1565C0;
+      white-space: nowrap;
+      letter-spacing: .5px;
+    }
+    .section-label hr { flex: 1; border: none; border-top: 1px solid #D8DCE0; }
+
+    .field { margin-bottom: 12px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: #757575;
+      margin-bottom: 5px;
+    }
+    .field input {
+      width: 100%;
+      font-size: 16px;
+      padding: 11px 13px;
+      border: 1.5px solid #E0E0E0;
+      border-radius: 8px;
+      background: #fff;
+      color: #212121;
+      outline: none;
+      -webkit-appearance: none;
+      transition: border-color .15s;
+    }
+    .field input:focus { border-color: #1565C0; }
+    .field .hint { font-size: 11px; color: #9E9E9E; margin-top: 4px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 14px;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.98); }
+
+    .btn-calc  { background: #2E7D32; color: #fff; margin-top: 6px; }
+    .btn-calc:active  { background: #1B5E20; }
+
+    .btn-clear {
+      background: none;
+      color: #9E9E9E;
+      font-size: 14px;
+      font-weight: 400;
+      padding: 10px;
+      margin-top: 2px;
+    }
+
+    /* Results */
+    #results {
+      display: none;
+      background: #E8F5E9;
+      border: 1.5px solid #A5D6A7;
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 18px;
+    }
+
+    #results h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #2E7D32;
+      margin-bottom: 12px;
+    }
+
+    .r-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 14px;
+      color: #212121;
+      padding: 3px 0;
+      gap: 8px;
+    }
+    .r-row span:first-child { color: #424242; }
+    .r-row.bold { font-weight: 700; }
+    .r-row.big  { font-size: 21px; font-weight: 800; color: #1B5E20; margin-top: 6px; }
+
+    .r-divider       { border: none; border-top: 1px solid #A5D6A7; margin: 8px 0; }
+    .r-divider.thick { border-top: 2px solid #66BB6A; }
+
+    .btn-save {
+      background: #1565C0;
+      color: #fff;
+      margin-top: 14px;
+    }
+    .btn-save:active { background: #0D47A1; }
+    .btn-save.saving { opacity: .7; }
+    .btn-save.saved  { background: #388E3C; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Product Pricer</h1>
+  <p>Enter your costs to calculate a sale price</p>
+</header>
+
+<main>
+  <div class="field">
+    <label>Product Name (optional)</label>
+    <input type="text" id="name" placeholder="e.g. Oak shelf" autocomplete="off">
+  </div>
+
+  <div class="section-label"><span>COSTS</span><hr></div>
+
+  <div class="field">
+    <label>Materials / Cost of Goods (£)</label>
+    <input type="number" id="materials" inputmode="decimal" placeholder="0.00" min="0" step="0.01">
+  </div>
+
+  <div class="two-col">
+    <div class="field">
+      <label>Hours to Make</label>
+      <input type="number" id="hours" inputmode="decimal" placeholder="0" min="0" step="0.5">
+    </div>
+    <div class="field">
+      <label>Hourly Rate (£/hr)</label>
+      <input type="number" id="rate" inputmode="decimal" placeholder="0.00" min="0" step="0.01">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Overhead (%)</label>
+    <input type="number" id="overhead" inputmode="decimal" placeholder="0" min="0" step="1">
+    <div class="hint">% of materials + labour (packaging, shipping, fees)</div>
+  </div>
+
+  <div class="section-label"><span>PRICING</span><hr></div>
+
+  <div class="field">
+    <label>Desired Profit Margin (%)</label>
+    <input type="number" id="margin" inputmode="decimal" placeholder="50" min="1" max="99" step="1">
+    <div class="hint">50% means half the sale price is your profit</div>
+  </div>
+
+  <button class="btn btn-calc" onclick="calculate()">Calculate Price</button>
+  <button class="btn btn-clear" onclick="clearForm()">Clear</button>
+
+  <div id="results">
+    <h3 id="res-name">Results</h3>
+    <div class="r-row"><span>Materials</span><span id="res-mat"></span></div>
+    <div class="r-row"><span id="res-labor-lbl">Labour</span><span id="res-labor"></span></div>
+    <div class="r-row"><span id="res-oh-lbl">Overhead</span><span id="res-oh"></span></div>
+    <hr class="r-divider">
+    <div class="r-row bold"><span>Total Cost</span><span id="res-total"></span></div>
+    <div class="r-row"><span id="res-profit-lbl">Your Profit</span><span id="res-profit"></span></div>
+    <hr class="r-divider thick">
+    <div class="r-row big"><span>SALE PRICE</span><span id="res-price"></span></div>
+    <button class="btn btn-save" id="save-btn" onclick="saveToSheet()">Save to Google Sheet</button>
+  </div>
+</main>
+
+<script>
+  // ── Replace this with your deployed Apps Script URL ──────────────────────
+  const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbz3CAC8MKqQ0V8WLKYotCL6LFYTyDsrTiZNTDCezkc54YRViuxHgvy_0ksDHLxYbGg/exec';
+  const SECRET     = 'NcNIfLL1utKYp0PEFTTZm7Rk2upPhK7J';
+  // ─────────────────────────────────────────────────────────────────────────
+
+  let lastResult = null;
+
+  // Restore last-used defaults
+  const saved = JSON.parse(localStorage.getItem('pricer') || '{}');
+  ['materials','hours','rate','overhead','margin'].forEach(id => {
+    if (saved[id] != null) document.getElementById(id).value = saved[id];
+  });
+
+  function fmt(n) {
+    return '£' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  function calculate() {
+    const v = id => parseFloat(document.getElementById(id).value) || 0;
+    const materials   = v('materials');
+    const hours       = v('hours');
+    const rate        = v('rate');
+    const overheadPct = v('overhead');
+    const margin      = v('margin') || 50;
+    const name        = document.getElementById('name').value.trim() || 'Product';
+
+    if (margin <= 0 || margin >= 100) {
+      alert('Profit margin must be between 1 and 99.');
+      return;
+    }
+
+    const labor    = hours * rate;
+    const overhead = (materials + labor) * overheadPct / 100;
+    const total    = materials + labor + overhead;
+    const price    = total / (1 - margin / 100);
+    const profit   = price - total;
+
+    localStorage.setItem('pricer', JSON.stringify({ materials, hours, rate, overhead: overheadPct, margin }));
+    lastResult = { name, materials, hours, rate, labor, overheadPct, overhead, total, margin, price, profit };
+
+    document.getElementById('res-name').textContent      = 'Results: ' + name;
+    document.getElementById('res-mat').textContent       = fmt(materials);
+    document.getElementById('res-labor-lbl').textContent = `Labour (${hours}h × £${rate}/hr)`;
+    document.getElementById('res-labor').textContent     = fmt(labor);
+    document.getElementById('res-oh-lbl').textContent    = `Overhead (${overheadPct}%)`;
+    document.getElementById('res-oh').textContent        = fmt(overhead);
+    document.getElementById('res-total').textContent     = fmt(total);
+    document.getElementById('res-profit-lbl').textContent = `Your Profit (${margin}%)`;
+    document.getElementById('res-profit').textContent    = fmt(profit);
+    document.getElementById('res-price').textContent     = fmt(price);
+
+    const btn = document.getElementById('save-btn');
+    btn.textContent = 'Save to Google Sheet';
+    btn.className   = 'btn btn-save';
+    btn.disabled    = false;
+
+    const el = document.getElementById('results');
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function saveToSheet() {
+    if (!lastResult) return;
+    const btn = document.getElementById('save-btn');
+    btn.textContent = 'Saving…';
+    btn.className   = 'btn btn-save saving';
+    btn.disabled    = true;
+
+    const now  = new Date();
+    const date = now.toLocaleDateString('en-GB') + ' ' +
+                 now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const r    = lastResult;
+    const row  = [
+      date, r.name,
+      +r.materials.toFixed(2), +r.hours.toFixed(2), +r.rate.toFixed(2),
+      +r.labor.toFixed(2), +r.overheadPct.toFixed(2), +r.overhead.toFixed(2),
+      +r.total.toFixed(2), +r.margin.toFixed(2), +r.price.toFixed(2),
+    ];
+
+    try {
+      const resp = await fetch(SHEETS_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        body: JSON.stringify({ row, secret: SECRET }),
+      });
+      const data = await resp.json();
+      if (data.status === 'ok') {
+        btn.textContent = 'Saved!';
+        btn.className   = 'btn btn-save saved';
+        btn.disabled    = false;
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    } catch (e) {
+      alert('Could not save: ' + e.message);
+      btn.textContent = 'Save to Google Sheet';
+      btn.className   = 'btn btn-save';
+      btn.disabled    = false;
+    }
+  }
+
+  function clearForm() {
+    ['name','materials','hours','rate','overhead','margin'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('results').style.display = 'none';
+    lastResult = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+</body>
+</html>
